@@ -51,6 +51,12 @@ CL = Motor(Ports.PORT1, False) # Claw
 FBR = Motor(Ports.PORT1, False) # Four Bar Right Side
 FBL = Motor(Ports.PORT1, False) # Four bar Left Side
 
+# Odometry setup
+
+ROTX = Rotation(Ports.PORT2, False)   
+ROTY = Rotation(Ports.PORT3, False)   
+IMU = Inertial(Ports.PORT4)
+
 leftvoltagecurve = 0 # This is here to adjust the speed of each side
 rightvoltagecurve = 0 
 # Creates the function to call drivetrain movement
@@ -150,6 +156,93 @@ def user_control():
         overidecontrol()
 
         wait(20, MSEC)
+
+
+# From here on is odemetry setup...
+
+DIAMETER = 2.0  # Inches
+CIRCUMFRENCE = DIAMETER * math.pi
+X = 0.0
+Y = 0.0
+LXD = 0.0
+LYD = 0.0
+ROTX.reset_position()
+ROTY.reset_position()
+IMU.calibrate()
+#While loop for The interal sensor to calibrate
+while IMU.is_calibrating():
+    wait(20, MSEC)
+wait(100, MSEC)
+def update():
+    global X
+    global Y
+    global LXD
+    global LYD
+    XD = (ROTX.position(DEGREES) / 360.0) * CIRCUMFRENCE
+    YD = (ROTY.position(DEGREES) / 360.0) * CIRCUMFRENCE
+    # Change since last update
+    deltaX = XD - LXD
+    deltaY = YD - LYD
+    # Save current values
+    LXD = XD
+    LYD = YD
+
+    # Convert heading to radians
+    heading = math.radians(IMU.heading())
+
+    # Convert robot velocity to field relative position
+    fieldX = deltaX * math.cos(heading) + deltaY * math.sin(heading)
+
+    fieldY = deltaY * math.cos(heading) - deltaX * math.sin(heading) 
+
+    # Update position
+    X += fieldX
+    Y += fieldY
+
+
+def getX():
+    return X
+
+def getY():
+    return Y
+
+def getHeading():
+    return IMU.heading()
+
+def reset():
+
+    global X
+    global Y
+    global LXD
+    global LYD
+
+    X = 0.0
+    Y = 0.0
+
+    ROTX.reset_position()
+    ROTY.reset_position()
+
+    LXD = 0.0
+    LYD = 0.0
+
+
+while True:
+
+    update()
+
+    brain.screen.clear_screen()
+
+    brain.screen.set_cursor(1, 1)
+    brain.screen.print(X)
+
+    brain.screen.set_cursor(2, 1)
+    brain.screen.print(Y)
+
+    brain.screen.set_cursor(3, 1)
+    brain.screen.print(IMU.heading())
+
+    wait(10, MSEC)
+
 
         
 
